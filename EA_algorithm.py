@@ -28,7 +28,7 @@ for i in range(len(variab_pos)):
 
 # Hyper parameters of the EA, tuned for a 5 centers configuration
 pop_size = 2000  # Size of the population
-offsprings_per_gen = 50  # Number of offspring per generation
+offspring_per_gen = 50  # Number of offspring per generation
 generations = 8000  # Number of generations
 update_generation = 666  # After how many generation strategy parameter is updated
 prec_pos = 4  # Inverse step-size of the uniform distrubution of the positions
@@ -69,7 +69,7 @@ precision = 13
 # Print parameters
 print('PARAMETERS:')
 print('pop_size=', pop_size,
-      ', offsprings_per_gen=', offsprings_per_gen,
+      ', offspring_per_gen=', offspring_per_gen,
       ', n_random_sol=', n_random_sol,
       ', generations=', generations,
       ', update_generation=', update_generation,
@@ -81,7 +81,7 @@ print('pop_size=', pop_size,
 
 print('PARAMETERS:', file=f_complete)
 print('pop_size=', pop_size,
-      ', offsprings_per_gen=', offsprings_per_gen,
+      ', offspring_per_gen=', offspring_per_gen,
       ', n_random_sol=', n_random_sol,
       ', generations=', generations,
       ', update_generation=', update_generation,
@@ -347,14 +347,14 @@ class Population:
                 cum_fitness[i] -= diff
         return parents_list[0], parents_list[1]
       
-    def select_ind_die(self, offsprings_per_gen, scaling=False):
+    def select_ind_die(self, offspring_per_gen, scaling=False):
         '''
-        This function selects offsprings_per_gen number of individuals
+        This function selects offspring_per_gen number of individuals
         that are replaced in the next generation
 
         Parameters
         ----------
-        offsprings_per_gen : Number of individuals that die per generation
+        offspring_per_gen : Number of individuals that die per generation
         scaling : Boole to implement scaling method in the selection process
                 or not. The default is False.
 
@@ -366,7 +366,7 @@ class Population:
             cum_inv_fitness = copy.copy(self.cum_inv_fit_scal)
         else:
             cum_inv_fitness = copy.copy(self.cum_inv_fit)
-        for _ in range(offsprings_per_gen):
+        for _ in range(offspring_per_gen):
             indx_die = 0
             prob_die = rnd.uniform(0, cum_inv_fitness[-1])
             while cum_inv_fitness[indx_die] < prob_die:
@@ -383,10 +383,10 @@ class Population:
     def offspring_gen(self):
         '''
         This function implements the reproduction and mutation process, running
-        offsprings_per_gen times. At each iteration, it calls the select_ind_parent
+        offspring_per_gen times. At each iteration, it calls the select_ind_parent
         function, makes the two individual reproduce and implements a mutation
-        with a probability int(dof/2). It then replaces offsprings_per_gen
-        individuals selected with the function select_ind_die with the offsprings.
+        with a probability int(dof/2). It then replaces offspring_per_gen
+        individuals selected with the function select_ind_die with the offspring.
         It updates the attributes of the population accordingly.
 
         Returns
@@ -395,7 +395,7 @@ class Population:
 
         '''
         offspring_list = []
-        for num_offspring in range(offsprings_per_gen):
+        for num_offspring in range(offspring_per_gen):
             indx1, indx2 = Population.select_ind_parent(self)
             offspring = Individual(var_pos, sigma_init_pop, is_offspring=True)
             mutat_parameter = sy.Rational(rnd.gauss(0, 10**precision), 10**precision)  # eq.(4.2)
@@ -416,6 +416,7 @@ class Population:
                 # Implement mutation
                 if rnd.randint(0, int(dof/2)) == 0:
                     mutat_parameter_i = sy.Rational(rnd.gauss(0, 10**precision), 10**precision)
+                    mutat_parameter_j = sy.Rational(rnd.gauss(0, 10**precision), 10**precision)
                     temp_sigma = sy.exp(tau_prime*mutat_parameter +
                                         tau*mutat_parameter_i)*offspring.sigma[ind_pos]
                     
@@ -423,16 +424,16 @@ class Population:
                         print(temp_sigma.evalf(precision + prec_temp))
                     offspring.sigma[ind_pos] = sy.Rational(*Func.float_to_rat(sigma_output, precision))
                     offspring.position[ind_pos] = offspring.position[ind_pos] +\
-                                                     offspring.sigma[ind_pos] * mutat_parameter
+                                                     offspring.sigma[ind_pos] * mutat_parameter_j
             # Compute offspring fitness
             Individual.evaluate_fitness(offspring)
             offspring_list.append(offspring)
-        # Replace the died individuals with the offsprings
-        die_list = Population.select_ind_die(self, offsprings_per_gen, False)
+        # Replace the died individuals with the offspring
+        die_list = Population.select_ind_die(self, offspring_per_gen, False)
         # Update the attributes of the population
         diff_fit = 0
         diff_inv_fit = 0
-        for num_offspring in range(offsprings_per_gen):
+        for num_offspring in range(offspring_per_gen):
             diff_fit += offspring_list[num_offspring].fitness - self.fitnesses[die_list[num_offspring]]
             diff_inv_fit += offspring_list[num_offspring].inv_fitness - self.inv_fitnesses[die_list[num_offspring]]
             self.fitnesses[die_list[num_offspring]] = offspring_list[num_offspring].fitness
